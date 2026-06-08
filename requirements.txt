@@ -1,0 +1,31 @@
+# Minimal, compatible dependencies required to run the chunking example.
+# Notes:
+# - `langchain-community` requires a matching `langchain` range. We pin to a compatible range below.
+# - `langchain-text-splitters` released newer 0.3.x versions; older 0.0.8 is unavailable on PyPI.
+
+# Core LangChain (compatible with langchain-community 0.3.x)
+langchain>=0.3.25,<1.0.0
+langchain-community==0.3.25
+
+# Text splitter used in chunking.py (0.3.x series is available)
+langchain-text-splitters>=0.3.3,<1.0.0
+
+# Optional LangChain internals used by some imports
+langchain-core>=0.2.0
+
+# Vectorstore, embedding client, PDF loader
+# Use a chromadb 0.3.x release that is available on PyPI.
+# 0.3.31 appears to be unavailable/yanked in your environment; 0.3.29 is commonly available.
+chromadb>=0.3.29,<0.4.0
+ollama-client>=0.1.0
+pypdf>=3.10.0
+
+# Pydantic v2 is required by recent langchain_core/langchain-community releases
+# (provides `model_validator`). If you have an environment with pydantic v1.x,
+# upgrade to v2 to avoid ImportError.
+pydantic>=2.0.0,<3.0.0
+
+# Utilities (optional)
+openai>=1.0.0
+python-dotenv>=0.19.2
+
