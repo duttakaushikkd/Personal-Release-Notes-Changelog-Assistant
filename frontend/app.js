@@ -43,7 +43,6 @@ async function ingestFile() {
 
 async function runQuery() {
   const q = document.getElementById('queryInput').value;
-  const topk = parseInt(document.getElementById('topk').value || '5', 10);
   const resultsDiv = document.getElementById('results');
   resultsDiv.innerHTML = '<div class="muted">Querying…</div>';
   document.getElementById('notes').innerText = '(waiting)';
@@ -52,7 +51,7 @@ async function runQuery() {
     const resp = await fetch(apiBase + '/query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: q, top_k: topk }),
+      body: JSON.stringify({ query: q }),
     });
     if (!resp.ok) {
       const err = await resp.text();
@@ -85,4 +84,3 @@ document.addEventListener('DOMContentLoaded', () => {
   if (retrieveBtn) retrieveBtn.addEventListener('click', runQuery);
   if (generateBtn) generateBtn.addEventListener('click', () => retrieveBtn.click());
 });
-

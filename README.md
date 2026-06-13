@@ -1,125 +1,297 @@
-# Personal Release Notes — Changelog Assistant
+# Personal Release Notes Changelog Assistant
 
-Small single-process example that ingests developer artifacts (PDF / text),
-chunks them, retrieves relevant pieces for a query, and synthesizes concise
-release-notes. The project is intentionally lightweight and works without
-heavy vector stores; it can optionally use a local Ollama LLM for higher-quality
-generation when available.
+Upload PDF, Markdown, or text release notes and ask questions about them. The
+FastAPI backend chunks and retrieves relevant content, then uses a locally
+running Ollama text-generation model for the final answer.
 
-Contents
-- `backend/` — FastAPI app + core logic (chunking, retrieval, generation)
-- `frontend/` — static single-page frontend (`index.html`, `app.js`)
-- `data/chunks.json` — canonical persisted chunk list (always written by the
-  chunker)
+## Prerequisites
 
-Architecture (quick)
-- Chunking: `backend/chunking/chunking.py` reads uploads, splits text into
-  chunks and always writes `data/chunks.json`. It will attempt to create
-  embeddings/Chroma if optional packages are present, but failures are non-fatal.
-- Retrieval: `backend/retrieval/retrieval.py` implements a small dependency-free
-  TF-IDF retriever that reads `data/chunks.json` and returns top-k results with
-  a `score` float in 0..1.
-- Generation: `backend/generation/generation.py` formats retrieved chunks into a
-  prompt and tries to call a local Ollama LLM via `langchain_community`. If an
-  LLM is not available, it falls back to a lightweight heuristic summarizer.
+- Python 3.10 or newer
+- Docker
+- `curl`
 
-Why file-system-first
-- The chunker always writes `data/chunks.json` so retrieval and generation
-  remain deterministic even if embeddings/vectorstores cannot be created on the
-  current machine.
+The application requires a text-generation Ollama model. An embedding-only
+model such as `nomic-embed-text` cannot generate answers.
 
-Frontend / Backend separation
-- The static frontend (`frontend/index.html`) can be served by the backend
-  (FastAPI mounts the `frontend` folder by default) or served separately (e.g.
-  `python -m http.server 3000 --directory frontend`). When served separately
-  the frontend reads a `meta[name="api-base"]` tag or the header input to
-  determine the backend URL; this avoids editing JS for development.
+## Run The Application
 
-Local Ollama usage
-- If you have a local Ollama daemon and compatible Python client installed
-  (for example via `langchain-community` / `ollama-client`), the generator will
-  attempt to call it. The generator sends a strict instruction to the model to
-  return a concise final answer only (no chunks or debug info).
-- If the LLM call fails (missing packages, runtime error, or Ollama not
-  running), the code falls back to `_heuristic_summarize` to produce a usable
-  output.
+Run every command from the repository root.
 
-Dependencies and common pitfalls
-- Install the core dependencies into a fresh virtualenv:
-  ```bash
-  python3 -m venv .venv
-  source .venv/bin/activate
-  python -m pip install --upgrade pip
-  pip install -r requirements.txt
-  ```
-- Note: some optional packages (Chroma, ollama-client) can conflict with
-  `langchain` due to differing `pydantic` version ranges. To avoid painful
-  resolution errors the `requirements.txt` in this repo comments out the
-  optional vector/embedding packages by default. If you need them, install them
-  into a dedicated environment and verify compatible versions.
+### 1. Start Ollama With Docker
 
-Running the app (development)
-1. Start the backend (serves API and can serve frontend if present):
-   ```bash
-   # inside the activated venv
-   python -m backend.api
-   # or with uvicorn explicitly
-   uvicorn backend.api:app --reload --reload-dir backend --reload-dir frontend --port 8000
-   ```
-2. Open the UI (served by backend): http://127.0.0.1:8000/
+Create and start a CPU-only Ollama container:
 
-Or run the frontend separately (useful when editing static files)
-1. Start the backend as above on port 8000.
-2. Option A — quick static server (Python):
-   ```bash
-   python3 -m http.server 3000 --directory frontend
-   ```
-   Open http://127.0.0.1:3000/ and enter the Backend URL (header control) or
-   set `<meta name="api-base" content="http://127.0.0.1:8000" />` in
-   `frontend/index.html` so the frontend will post to the correct host.
+```bash
+docker run -d \
+  --name ollama \
+  -p 11434:11434 \
+  -v ollama:/root/.ollama \
+  ollama/ollama
+```
 
-API endpoints (used by the frontend)
-- POST /ingest — upload a file (multipart form; file field name `file`) and
-  run the chunker. Returns JSON: {status, chunks, preview}
-- POST /query — JSON {query: str, top_k: int} -> returns {query, top_k,
-  results, notes}. `results` is a list of chunk dicts with `id`, `text`, and
-  `score`. `notes` is the generated text (LLM or heuristic).
+If a container named `ollama` already exists, start it instead:
 
-CLI examples
-- Upload a file:
-  ```bash
-  curl -F "file=@./changelog.pdf" http://127.0.0.1:8000/ingest
-  ```
-- Query the chunks and generate notes:
-  ```bash
-  curl -H "Content-Type: application/json" -d '{"query":"Summarize user-visible changes","top_k":5}' http://127.0.0.1:8000/query
-  ```
+```bash
+docker start ollama
+```
 
-Developer notes
-- Public function entry points used by the UI and other tools:
-  - `backend.chunking.start(pdf_path)` — run chunking and write `data/chunks.json`.
-  - `backend.retrieval.retrieve(query, top_k, data_path)` — return top-k chunks.
-  - `backend.generation.generate_release_notes(query, chunks, llm_model=None)` —
-	produce release notes (tries Ollama, falls back to heuristic).
-- The code is defensive: chunking uses lazy imports and fallbacks so the server
-  can run even when optional packages are missing or incompatible.
-- Streamlit demo: `backend/app.py` was renamed to `backend/app.py.disabled` —
-  you can restore it if you want the Streamlit flow instead of the static
-  frontend.
+For an NVIDIA GPU, install the NVIDIA Container Toolkit and create the
+container with GPU access:
 
-Troubleshooting
-- If the frontend's Upload button returns a 501 HTML error, you are posting to
-  a static server that does not accept POST. Make sure the frontend is calling
-  the backend URL (use the header input control or set the meta tag) and that
-  the backend is running.
-- If you see ImportError related to `pydantic.model_validator`, you are
-  probably running with Pydantic v1. Install the project's requirements in a
-  fresh environment so Pydantic v2 is used (or adjust package versions).
+```bash
+docker run -d \
+  --gpus=all \
+  --name ollama \
+  -p 11434:11434 \
+  -v ollama:/root/.ollama \
+  ollama/ollama
+```
 
-License & notes
-- This project is a small example and not production hardened. Use it as a
-  starting point for building a release-notes assistant; adapt and harden
-  components (auth, input validation, larger LLM handling) before production.
+### 2. Install A Text-Generation Model
 
-Enjoy!
+Pull `llama3.2` into the running Ollama container:
 
+```bash
+docker exec -it ollama ollama pull llama3.2
+```
+
+Verify that the model is installed:
+
+```bash
+docker exec -it ollama ollama list
+```
+
+Test text generation:
+
+```bash
+docker exec -it ollama ollama run llama3.2 "Reply with: Ollama is ready"
+```
+
+Verify that the Ollama API is accessible from the host:
+
+```bash
+curl http://127.0.0.1:11434/api/tags
+```
+
+### 3. Install Python Dependencies
+
+Create and activate a virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+On Windows PowerShell, activate the environment with:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+### 4. Configure The Application
+
+Tell the application which Ollama server and model to use:
+
+```bash
+export OLLAMA_BASE_URL=http://127.0.0.1:11434
+export OLLAMA_MODEL=llama3.2
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:OLLAMA_BASE_URL="http://127.0.0.1:11434"
+$env:OLLAMA_MODEL="llama3.2"
+```
+
+### 5. Start The Application
+
+```bash
+python -m backend.api
+```
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000), upload a release-notes
+document, and ask a question.
+
+The backend serves both the API and the static frontend. Keep the terminal
+running while using the application.
+
+## Verify With Curl
+
+Upload the included sample release notes:
+
+```bash
+curl -F "file=@./sample-release-notes.md" http://127.0.0.1:8000/ingest
+```
+
+Ask a question:
+
+```bash
+curl -H "Content-Type: application/json" \
+  -d '{"query":"How many bugs were fixed in the release?"}' \
+  http://127.0.0.1:8000/query
+```
+
+## Existing Ollama Container
+
+If Ollama is already running in Docker, install a text-generation model and
+restart it if necessary:
+
+```bash
+docker start ollama
+docker exec -it ollama ollama pull llama3.2
+docker exec -it ollama ollama list
+```
+
+The application runs on the host and connects through the published
+`11434:11434` port:
+
+```bash
+export OLLAMA_BASE_URL=http://127.0.0.1:11434
+export OLLAMA_MODEL=llama3.2
+python -m backend.api
+```
+
+## Running The Application In Docker
+
+When the application itself runs in another Docker container, both containers
+must use the same Docker network. The application must connect to Ollama by
+container name rather than `127.0.0.1`.
+
+```bash
+docker network create release-notes-network
+docker network connect release-notes-network ollama
+```
+
+Configure the application container with:
+
+```text
+OLLAMA_BASE_URL=http://ollama:11434
+OLLAMA_MODEL=llama3.2
+```
+
+This repository currently does not include an application Dockerfile, so the
+supported application entrypoint is `python -m backend.api`.
+
+## Stop Or Remove Ollama
+
+Stop the container without deleting downloaded models:
+
+```bash
+docker stop ollama
+```
+
+Remove and recreate the container while preserving models in the `ollama`
+volume:
+
+```bash
+docker stop ollama
+docker rm ollama
+docker run -d \
+  --name ollama \
+  -p 11434:11434 \
+  -v ollama:/root/.ollama \
+  ollama/ollama
+```
+
+## API
+
+### Upload And Chunk A Document
+
+```http
+POST /ingest
+POST /api/chunk
+```
+
+Send a multipart form with a `file` field. The chunker writes the canonical
+chunk list to `data/chunks.json`.
+
+### Ask A Question
+
+```http
+POST /query
+POST /api/query
+Content-Type: application/json
+
+{"query":"Summarize user-visible changes"}
+```
+
+The response contains:
+
+- `query`: the submitted question
+- `results`: relevant chunks with retrieval scores
+- `notes`: the final answer generated by Ollama
+
+## Architecture
+
+- `backend/chunking/chunking.py`: reads uploaded PDF or text files, creates
+  chunks, and writes `data/chunks.json`.
+- `backend/retrieval/retrieval.py`: retrieves relevant chunks using a
+  dependency-free TF-IDF implementation.
+- `backend/generation/generation.py`: sends retrieved context and verified
+  aggregate facts to the local Ollama HTTP API.
+- `backend/api.py`: exposes FastAPI endpoints and serves the frontend.
+- `frontend/`: static user interface.
+
+## Run Tests
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+## Troubleshooting
+
+### `Local Ollama generation failed: No text-generation Ollama model is installed`
+
+Install and configure a generation model:
+
+```bash
+docker exec -it ollama ollama pull llama3.2
+export OLLAMA_MODEL=llama3.2
+```
+
+### Cannot Connect To Ollama
+
+Confirm that the container is running and port `11434` is published:
+
+```bash
+docker ps --filter name=ollama
+curl http://127.0.0.1:11434/api/tags
+docker logs ollama
+```
+
+If the application runs in Docker, use `http://ollama:11434` and place both
+containers on the same network.
+
+### Query API Returns HTTP 503
+
+The application only returns successful query responses when Ollama generates
+the final answer. Check the Ollama container, installed models, and the
+`OLLAMA_BASE_URL` and `OLLAMA_MODEL` environment variables.
+
+### Upload Works But Results Are Unexpected
+
+Upload the intended document again. The latest upload replaces the canonical
+content in `data/chunks.json`.
+
+### Dependency Or Pydantic Errors
+
+Use a fresh virtual environment and reinstall dependencies:
+
+```bash
+rm -rf .venv
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Notes
+
+- Uploaded files are stored in `uploads/`.
+- Canonical chunks are stored in `data/chunks.json`.
+- Ollama calls default to `http://127.0.0.1:11434` when `OLLAMA_BASE_URL` is
+  not set.
+- If `OLLAMA_MODEL` is not set, the application selects the first installed
+  non-embedding model returned by Ollama.

@@ -8,11 +8,16 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.chunking.chunking import start as chunk_start
-from backend.retrieval.retrieval import retrieve
-from backend.generation.generation import generate_release_notes
+from backend.retrieval.retrieval import load_chunks, retrieve
+from backend.generation.generation import (
+    OllamaGenerationError,
+    generate_release_notes,
+    requires_full_context,
+)
 
 
 app = FastAPI(title="Release Notes Assistant API")
+DEFAULT_TOP_K = 5
 
 # Allow requests from the local frontend (and other origins during dev)
 app.add_middleware(
@@ -60,34 +65,38 @@ async def ingest(file: UploadFile = File(...)):
 
 @app.post("/api/query")
 async def api_query(body: dict):
-    """Accept JSON {query: str, top_k: int} and return retrieved chunks + generated notes."""
+    """Accept JSON {query: str} and return retrieved chunks + generated notes."""
     query = body.get("query")
-    top_k = int(body.get("top_k", 5))
     if not query:
         raise HTTPException(status_code=400, detail="Missing 'query' in request body")
 
     # Retrieve top-k chunks from persisted data/chunks.json
     try:
-        results = retrieve(query, top_k=top_k, data_path="data/chunks.json")
+        results = retrieve(query, top_k=DEFAULT_TOP_K, data_path="data/chunks.json")
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="No chunks found. Upload a document first.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Retrieval failed: {e}")
 
-    # Generate release notes from retrieved chunks (may use local Ollama or fallback)
+    # Aggregate questions need the complete canonical document, not only top-k.
+    generation_chunks = load_chunks("data/chunks.json") if requires_full_context(query) else results
+
+    # Generate the final answer with the local Ollama text-generation model.
     try:
-        notes = generate_release_notes(query, results)
+        notes = generate_release_notes(query, generation_chunks)
+    except OllamaGenerationError as e:
+        raise HTTPException(status_code=503, detail=f"Local Ollama generation failed: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Generation failed: {e}")
 
-    return {"query": query, "top_k": top_k, "results": results, "notes": notes}
+    return {"query": query, "results": results, "notes": notes}
 
 
 @app.post("/query")
 async def query(body: dict):
     """Compatibility endpoint mirroring `/api/query` at `/query`.
 
-    Accepts JSON {query: str, top_k: int} and returns the same shape as
+    Accepts JSON {query: str} and returns the same shape as
     `/api/query` for the simpler frontend integration.
     """
     return await api_query(body)
@@ -121,4 +130,3 @@ def run():
 
 if __name__ == "__main__":
     run()
-

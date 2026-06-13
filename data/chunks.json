@@ -1,54 +1,66 @@
 [
   {
     "id": 0,
-    "text": "+91 - 9113405798 \nHyderabad, Telangana  \nduttakaushikkd@gmail.com                         \n              Kaushik Dutta      \nFull Stack Developer | Cloud & Scalable Solutions         linkedin.com/in/kaushik-dutta-24701b147/                 \n \n \nFull-stack software engineer with 5+ years  of experience delivering scalable, high -performance, and secure enterprise applications. Skilled in Java, Spring Boot, React, Microservices,"
+    "text": "Release Notes - Version 3.2.0\nReleased: June 13, 2026\nOverview\nThis release brings significant performance improvements, enhanced authentication features, and \nfixes for critical security vulnerabilities. We recommend all users upgrade as soon as possible.\nBreaking Changes\n• Removed deprecated api/v1/legacy endpoints. Please migrate to api/v2 (migration \nguide available at docs/migration-v1-to-v2.md).\n• AuthToken expiration now defaults to 24 hours instead of 7 days. Use tokenExpiry"
   },
   {
     "id": 1,
-    "text": "and Cloud ( Azure, AWS , OCI). Proven record of improving system performance, reducing downtime, and enhancing user experience. Experienced in Agile/Scrum  environments, building \nproducts for global clients, and collaborating across teams to deliver business impact.  \nCORE COMPETENCIES \nJava | Spring Boot | React.js | Microservices | RESTful APIs | Cloud -Native Apps | Azure, AWS & OCI | CI/CD | Agile/Scrum | Performance Optimization  \n \nSKILLS"
+    "text": "• AuthToken expiration now defaults to 24 hours instead of 7 days. Use tokenExpiry \nenvironment variable to configure.\n• The --legacy-config CLI flag has been removed. Convert your config to the new \nYAML format using migrate-config tool.\nNew Features\nAuthentication & Security\n• Multi-factor Authentication (MFA): Users can now enable time-based one-time password \n(TOTP) for enhanced account security.\n• OAuth2 Integration: Added support for login via Google, GitHub, and Microsoft accounts."
   },
   {
     "id": 2,
-    "text": "SKILLS \nFrontend HTML, CSS, JavaScript, React JS, Axios, TypeScript, Adaptive Cards \nBackend JAVA, Spring, Spring MVC, Spring Boot, Microservices, Kafka, OCI Stream & Object storage, NestJS, Redis Cache \nDatabase MS SQL, Mongo DB \nTesting JUnit, AssertJ, Mockito, Jest \nSecurity Spring Security, OAuth, JWT \nCloud Azure, OCI, AWS \nDeployment Docker, Kubernetes \nTools Git, Postman, Bitbucket JIRA, Azure Git, Eclipse, SQL Developer, Grafana, Prometheus, OpenTelemetry"
+    "text": "• OAuth2 Integration: Added support for login via Google, GitHub, and Microsoft accounts. \nEnterprise customers can configure custom OAuth2 providers.\n• IP Whitelist Management: New dashboard controls to manage allowed IP ranges for API \naccess. Per-user and per-application granularity supported.\n• Security Headers: Automatic HSTS, CSP, and X-Frame-Options headers added to all \nHTTP responses.\nPerformance Enhancements"
   },
   {
     "id": 3,
-    "text": "AI Tools                                       Copilot, Claude, Gpt \n \nTECHNICAL  EXPERIENCES  & RESPONSIBILITIES  \n \nPRINICIPAL SOFTWARE  ENGINEER / SENIOR  SOFTWARE  ENGINEER  OCT 24 — Present \nDeltek India Remote, India \n• Datalake lexical search:  Designed and built the search mechanism for datalake , which can be used by products to search data with the help of an api. Using aws  lambda to build the services."
+    "text": "HTTP responses.\nPerformance Enhancements\n• Database Query Optimization: Reduced average query time by 40% through index \nimprovements and query rewrites.\n• Caching Layer: Redis-backed distributed cache for frequently accessed resources. TTL \nconfigurable per resource type.\n• Connection Pooling: Increased default connection pool size from 10 to 50. Adaptive pool \nsizing under heavy load.\n• Batch API Operations: New /batch endpoint for submitting up to 100 operations in a"
   },
   {
     "id": 4,
-    "text": "• Notification Service:  Designed and built a notification service, which can be used by products to send notifications via email. Developed spring bo ot api’s which can be used to access OCI \nresources and deployed the service i n OCI. Led this project.  \n• Intelligent Document Reader Project: Designed and Built an intelligent AI system from scratch which takes a document, reads it and answers user’s question. Develo ped 3 services. One for"
+    "text": "• Batch API Operations: New /batch endpoint for submitting up to 100 operations in a \nsingle request. Useful for bulk data migrations."
   },
   {
     "id": 5,
-    "text": "pushing the document metadata to OCI object s torage and pushing an event. Second one for polling Kafka event and passing it to the third service which interacts with a LL M model. Used OCI \nStream to produce and consume events.  Led this project.  \n• Chatbot  Project:  Built a chatbot with integration with Microsoft teams open ai. Developed two services from scratch. One is called Register service,  that is used for Bot registration which is"
+    "text": "API Improvements\n• GraphQL Endpoint: New /graphql endpoint alongside REST API. Full schema \ndocumentation available in the API explorer.\n• Webhook Events: Added webhook support for user creation, deletion, and role changes. \nRetry logic with exponential backoff.\n• Rate Limiting: Improved rate limiter now distinguishes between authenticated and \nunauthenticated requests. See docs for new limits.\n• Response Pagination: New cursor-based pagination (in addition to offset) for large result \nsets."
   },
   {
     "id": 6,
-    "text": "built in Spring Boot and other is called MCP server which works as a communicating lay er for the LLM Service.  The project follows an agentic AI architecture leveraging Generative AI.  \n• Logging  & Metrics  Feature:  Led the integration of logging and metrics feature in the bot project. Developed logging layer which pushes the logs to Grafa na with the help of Winston library and \nmetrics to Prometheus server which could then be viewed in a different Grafana dashboard."
+    "text": "• Response Pagination: New cursor-based pagination (in addition to offset) for large result \nsets.\nUser Interface\n• Dark Mode: Complete dark mode theme with automatic OS preference detection.\n• Improved Dashboard: Redesigned dashboard with real-time metrics, customizable \nwidgets, and export functionality.\n• Mobile Responsive: All pages now 100% mobile responsive. Tested across iOS 14+ and \nAndroid 10+.\n• Accessibility: Added ARIA labels, improved keyboard navigation, and screen reader"
   },
   {
     "id": 7,
-    "text": "metrics to Prometheus server which could then be viewed in a different Grafana dashboard.  \n \nSOFTWARE ENGINEER / SENIOR  SOFTWARE  ENGINEER  AUG 2020 — OCT 24 \nTemenos  India Bengaluru, Karnataka \n• Mirabaud project: This was my ongoing project. Analyzed the Keycloak  system and built a similar feature. Built a trading constraint tool and used Azure Cloud to deploy and test all \nfixes and developments."
+    "text": "Android 10+.\n• Accessibility: Added ARIA labels, improved keyboard navigation, and screen reader \nsupport (WCAG 2.1 AA compliant).\nDeveloper Experience\n• SDKs: Released official SDKs for Python, JavaScript, Go, and Java with full type hints and \nautocomplete support.\n• CLI Tool: New command-line tool for local development. Replaces separate shell scripts. \nSupports Windows, macOS, Linux.\n• Improved Logging: Structured JSON logging with configurable verbosity levels. Integrates"
   },
   {
     "id": 8,
-    "text": "fixes and developments.  \n• Eurobank Luxembourg  project: This is another ongoing project. Leading  a cross -functional team of 6 members to successfully launch a new product line. Collaborated with cross -\nfunctional teams to launch client FATCA simulator ahead of schedule.  \n• Eurobank Greece project: Led this project. Supported the bank to achieve live. Wor ked for over 50 SIT, UAT, and QA maintenance releases. Developed backend simulator which takes"
+    "text": "• Improved Logging: Structured JSON logging with configurable verbosity levels. Integrates \nwith ELK/Splunk/DataDog.\n• OpenTelemetry Support: Full instrumentation for tracing, metrics, and logs. Tested with \nJaeger and Zipkin.\nBug Fixes\n• Fixed: User session not persisting across page reloads (issue #4521)\n• Fixed: Race condition in concurrent update scenario causing data corruption (issue #4892)\n• Fixed: CSV export truncating fields over 255 characters (issue #4133)"
   },
   {
     "id": 9,
-    "text": "the request from the react application using Axios and simulates the same in the Spring Boot. Implemented new customer relationship management (CRM) software, re sulting in a 30% \nimprovement in data accuracy.  \n• Eurobank Cyprus project: Played  a crucial role in this project. Supported the bank to achieve live. Strategized and built a portfolio rebalance system which helped the client to increase their sales"
+    "text": "• Fixed: CSV export truncating fields over 255 characters (issue #4133)\n• Fixed: Timezone handling in scheduled tasks not respecting DST (issue #4456)\n• Fixed: Memory leak in background worker process after 7 days uptime (issue #4701)\n• Fixed: Email notifications not sent to users with plus-addressed emails (issue #4322)"
   },
   {
     "id": 10,
-    "text": "by 30%. Wo rked on web application performance fixes and improved the time complexity of the client’s system. Also worked on post -live maintenance defects.  \n• Served  twice  as an Onsite  technical  consultant  (Eurobank  Cyprus) —from  May to July 2022, and again  from  September  to October  2022. \n• Worked on over 20 SIT and UAT releases  to stabilize the bank’s system and gave 24/7 support to the client. Was part of different  war rooms to support clients with real -time data."
+    "text": "Deprecated Features\n• api/v2/users/search endpoint (use api/v3/users/search instead). Will be \nremoved in v4.0.\n• Database driver for PostgreSQL 9.6 compatibility (upgrade to 12+ recommended).\n• LDAP authentication (OAuth2 recommended as replacement). Still functional but \nunsupported.\nKnown Limitations\n• GraphQL endpoint does not yet support subscriptions (will be added in v3.3).\n• Webhook retry mechanism has a maximum of 10 attempts over 24 hours."
   },
   {
     "id": 11,
-    "text": "• Optimized and enhanced  the portfolio performance  display web application  which improved  the page load times by  50% and enhanced  the user experience. \n• Eurobank  Cyprus  project:  Worked  on many developments  during this tenure  concerning  different  wealth  banking  modules.  Also worked  on multiple environment creations \nwhich helped us to replicate the issues that clients were facing and used that environment to resolve the same."
+    "text": "• Webhook retry mechanism has a maximum of 10 attempts over 24 hours.\n• Dark mode theme colors not yet customizable (planned for v4.0).\nPerformance Metrics\n• Average response time: 120ms (down from 200ms)\n• Database query time: 25ms (down from 45ms)\n• Memory usage per instance: 256MB (down from 380MB)\n• Throughput: ~5,000 requests/second (up from ~2,500)\nDeployment & Upgrades\n• Docker Image: Published to Docker Hub at mycompany/myapp:3.2.0. Size: 145MB."
   },
   {
     "id": 12,
-    "text": "• Innovated a report purging tool with Spring and achieved a 40% reduction in server load by removing the old unused reports from the server. \n• SGP/HKG  Model Banks: Worked for over 10-15 maintenance  releases. \nEDUCATION \n \nB.Tech (Information Technology), SRM Institute of Science & Technology,  Chennai (82.7%) JUNE 2016  - MAY 2020 \nAWARDS \n      Deltek Achievers (2×) | Temenos Badge | Spot Award | GEM Innovation Award | T -Star (2×)"
+    "text": "• Docker Image: Published to Docker Hub at mycompany/myapp:3.2.0. Size: 145MB.\n• Kubernetes Helm Chart: Updated chart available at charts/myapp:3.2.0.\n• Database Migration: Run migrate.sh to update schema. Estimated time: 10 minutes for \ntypical databases.\n• Backward Compatibility: v3.1.x clients will continue to work with v3.2.0 servers, but new \nfeatures require client upgrade.\nDependencies Updated\n• Framework: Updated from 2.4 to 3.1 (minor breaking changes; see migration guide)."
+  },
+  {
+    "id": 13,
+    "text": "• Framework: Updated from 2.4 to 3.1 (minor breaking changes; see migration guide).\n• Database driver: Updated from 1.9 to 2.3 (now supports async queries).\n• Authentication library: Updated to support TOTP; TOTP QR codes now generated client-\nside.\n• Encryption library: Updated from Crypto 3.x to 4.x (security patch for AES mode).\nContributors\nThanks to everyone who contributed to this release, including:\n• Sarah Chen (Performance improvements)"
+  },
+  {
+    "id": 14,
+    "text": "• Mike Rodriguez (OAuth2 integration)\n• Emily Watson (Mobile responsive design)\n• Team Infrastructure (Deployment automation)\nSupport & Documentation\n• Docs: https://docs.mycompany.com/3.2\n• Migration Guide: https://docs.mycompany.com/3.2/migration-from-3.1\n• API Reference: https://api.mycompany.com/docs (interactive explorer)\n• Support: Email support@mycompany.com or visit https://support.mycompany.com\nDownload\n• Windows x64  \n• macOS  \n• Linux x64  \n• Docker"
+  },
+  {
+    "id": 15,
+    "text": "Download\n• Windows x64  \n• macOS  \n• Linux x64  \n• Docker  \nSecurity Notice: Please review the security advisories section on our website. Version 3.2.0 patches \n3 critical vulnerabilities from v3.1.x."
   }
 ]
