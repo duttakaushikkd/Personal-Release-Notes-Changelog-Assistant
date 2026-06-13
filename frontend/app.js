@@ -63,28 +63,13 @@ async function runQuery() {
 
     // Render as soon as we have the JSON payload
     const j = await resp.json();
-    resultsDiv.innerHTML = '';
-    if (Array.isArray(j.results) && j.results.length) {
-      j.results.forEach(r => {
-        const el = document.createElement('div');
-        el.className = 'result';
-        const score = document.createElement('span');
-        score.className = 'score';
-        score.innerText = (r.score || 0).toFixed(4);
-        const id = document.createElement('strong');
-        id.innerText = ' id=' + (r.id ?? '');
-        const txt = document.createElement('div');
-        txt.innerText = (r.text || '').slice(0, 800).replace(/\n/g,' ');
-        el.appendChild(score);
-        el.appendChild(id);
-        el.appendChild(txt);
-        resultsDiv.appendChild(el);
-      });
-    } else {
-      resultsDiv.innerHTML = '<div class="muted">No results</div>';
-    }
-
-    document.getElementById('notes').innerText = j.notes || '(no notes)';
+    // Clear any chunk results and display only the exact answer at top
+    if (resultsDiv) resultsDiv.innerHTML = '';
+    const exact = document.getElementById('exactAnswer');
+    if (exact) exact.innerText = j.notes ? j.notes : '(no notes)';
+    // keep legacy notes element in sync (hidden by default)
+    const notesEl = document.getElementById('notes');
+    if (notesEl) notesEl.innerText = j.notes || '(no notes)';
   } catch (err) {
     resultsDiv.innerText = 'Query error: ' + err;
     document.getElementById('notes').innerText = '(error)';

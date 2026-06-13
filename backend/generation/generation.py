@@ -53,10 +53,13 @@ def generate_release_notes(query: str, chunks: List[Dict], llm_model: Optional[s
     """
     context = _format_context(chunks)
 
+    # Strong instruction to the LLM: return concise, final answer only.
     prompt = textwrap.dedent(f"""
     You are an AI assistant that produces concise release notes from developer
-    artifacts. Given the user query and the following context, synthesize a
-    short, organized set of release notes with headings and bullet points.
+    artifacts. Given the user query and the following context, produce a
+    concise, final answer only. DO NOT return source chunks, ids, metadata,
+    or any extra debugging information — only the synthesized release notes
+    organized with short headings and bullet points.
 
     Query: {query}
 
@@ -66,22 +69,40 @@ def generate_release_notes(query: str, chunks: List[Dict], llm_model: Optional[s
 
     # Try to use langchain_community Ollama first (if available)
     try:
+        # Try langchain-community Ollama wrapper first (if available).
         from langchain_community.llms import Ollama
 
-        # If the user provided a model name, pass it via the model kwarg
+        # Explicitly request deterministic output when possible.
         llm_kwargs = {"model": llm_model} if llm_model else {}
-        llm = Ollama(**llm_kwargs) if llm_kwargs else Ollama()
-        # The LLM may accept a simple prompt call
-        res = llm(prompt)
-        # llm(prompt) may return a string or an object with .to_string()
-        if isinstance(res, str):
-            return res
         try:
-            return str(res)
+            llm = Ollama(**llm_kwargs) if llm_kwargs else Ollama()
         except Exception:
-            return _heuristic_summarize(query, chunks)
+            # Fallback to default constructor if model kwarg was unsupported
+            llm = Ollama()
+
+        # Call the LLM and attempt to extract plain text
+        res = llm(prompt)
+        print(res)
+        # Common return shapes: string, object with .to_string(), or dict-like
+        if isinstance(res, str):
+            return res.strip()
+        if hasattr(res, "to_string"):
+            try:
+                return str(res.to_string()).strip()
+            except Exception:
+                pass
+        # dict-like responses may contain text in common fields
+        try:
+            if isinstance(res, dict):
+                for k in ("text", "content", "response", "result"):
+                    if k in res and isinstance(res[k], str):
+                        return res[k].strip()
+        except Exception:
+            pass
+        # Last resort: coerce to string
+        return str(res).strip()
     except Exception:
-        # LLM not available or errored; use heuristic
+        # LLM path unavailable — use heuristic fallback
         return _heuristic_summarize(query, chunks)
 
 

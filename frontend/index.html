@@ -66,6 +66,12 @@
 
       <div style="height:18px"></div>
 
+      <!-- Prominent exact-answer area shown at the top of the UI -->
+      <div class="card" style="margin-bottom:16px;">
+        <h2 style="margin:0 0 8px 0">Answer</h2>
+        <pre id="exactAnswer" style="min-height:64px;">(no answer yet)</pre>
+      </div>
+
       <div class="columns">
         <div class="column">
           <div class="card">
@@ -89,10 +95,9 @@
             <div style="height:12px"></div>
             <button id="retrieveBtn">Retrieve</button>
             <button id="generateBtn">Generate Release Notes</button>
-            <h3>Results</h3>
-            <div id="results"></div>
-            <h3>Generated Notes</h3>
-            <pre id="notes">(no notes yet)</pre>
+            <!-- Results removed: UI shows the exact answer at the top of the page -->
+            <div id="results" style="display:none"></div>
+            <pre id="notes" style="display:none">(no notes yet)</pre>
           </div>
         </div>
       </div>
