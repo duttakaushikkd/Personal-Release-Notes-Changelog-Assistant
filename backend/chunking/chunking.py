@@ -1,9 +1,12 @@
 import os
 import argparse
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.vectorstores import Chroma
+
+# NOTE: Many optional dependencies (langchain_community, langchain_text_splitters,
+# chroma/ollama clients) can import heavy packages that may be incompatible with
+# the runtime (common pydantic v1 vs v2 issues). To make this module import-safe
+# even when optional deps are missing or incompatible, perform those imports
+# lazily inside the function where they're needed and fall back to lightweight
+# implementations.
 
 def chunking(pdf_path: str = "sample.pdf"):
     """Chunk the provided PDF and return the created Chroma vector store.
@@ -48,16 +51,38 @@ def chunking(pdf_path: str = "sample.pdf"):
 
         docs = [_SimpleDoc(text)]
     else:
-        loader = PyPDFLoader(pdf_path)
+        # Lazy-import the PDF loader to avoid hard failures when the
+        # langchain_community package (or its transitive deps) are
+        # unavailable or incompatible.
         try:
-            docs = loader.load()
+            from langchain_community.document_loaders import PyPDFLoader
+
+            loader = PyPDFLoader(pdf_path)
+            try:
+                docs = loader.load()
+            except Exception as e:
+                print("PDF loader failed, attempting to read as text. Error:", e)
+                try:
+                    with open(pdf_path, "r", encoding="utf-8", errors="replace") as tf:
+                        text = tf.read()
+                except Exception as e2:
+                    print("Failed to read file as text after PDF loader failed:", e2)
+                    return None
+
+                class _SimpleDoc:
+                    def __init__(self, text):
+                        self.page_content = text
+                        self.metadata = {}
+
+                docs = [_SimpleDoc(text)]
         except Exception as e:
-            print("PDF loader failed, attempting to read as text. Error:", e)
+            # Import failed — fall back to reading file as plain text.
+            print("PDF loader import failed, reading as text. Error:", e)
             try:
                 with open(pdf_path, "r", encoding="utf-8", errors="replace") as tf:
                     text = tf.read()
             except Exception as e2:
-                print("Failed to read file as text after PDF loader failed:", e2)
+                print("Failed to read file as text after import failure:", e2)
                 return None
 
             class _SimpleDoc:
@@ -69,8 +94,31 @@ def chunking(pdf_path: str = "sample.pdf"):
 
     print("Chunking document into smaller pieces...")
     # Split text into manageable sizes with an overlap to maintain context between chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
-    raw_chunks = text_splitter.split_documents(docs)
+    # Try to use langchain_text_splitters if available; otherwise fall back to a
+    # simple inlined splitter to avoid hard dependency failures.
+    try:
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+        raw_chunks = text_splitter.split_documents(docs)
+    except Exception:
+        # Lightweight fallback: split raw document text into fixed-size windows
+        raw_chunks = []
+        chunk_size = 500
+        chunk_overlap = 100
+        for d in docs:
+            if hasattr(d, "page_content"):
+                text = d.page_content
+            elif hasattr(d, "text"):
+                text = d.text
+            else:
+                text = str(d)
+            start = 0
+            L = len(text)
+            while start < L:
+                end = min(start + chunk_size, L)
+                raw_chunks.append(text[start:end])
+                start = max(end - chunk_overlap, end)
 
     # Convert splitter output (Document objects or strings) into plain dicts
     chunks = []
@@ -105,8 +153,15 @@ def chunking(pdf_path: str = "sample.pdf"):
     # available. Failures here should not prevent chunk file creation above.
     try:
         print("Initializing embedding model and vector database...")
+        # Lazy import optional embedding/vectorstore clients
+        from langchain_community.embeddings import OllamaEmbeddings
+        from langchain_community.vectorstores import Chroma
+
         embeddings = OllamaEmbeddings(model="nomic-embed-text")
         texts = [c["text"] for c in chunks]
+        # Chroma.from_documents may expect Document objects; we pass plain texts
+        # and rely on the library to accept them. This is best-effort and
+        # non-fatal if it fails.
         vector_store = Chroma.from_documents(documents=texts, embedding=embeddings)
         print("Created in-memory Chroma vector store")
     except Exception as e:

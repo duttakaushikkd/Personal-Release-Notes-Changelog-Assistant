@@ -5,83 +5,105 @@
     <title>Release Notes Assistant (Frontend)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-      body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin: 20px; }
-      .column { display:inline-block; vertical-align:top; width:48%; margin-right:2%; }
-      pre { background:#f6f8fa; padding:10px; border-radius:6px; overflow:auto; }
+      :root{
+        --bg: #ffffff;
+        --muted: #6b7280;
+        --card: #f6f8fa;
+        --accent: #2563eb;
+        --accent-contrast: #ffffff;
+        --radius: 8px;
+      }
+      html,body{height:100%;}
+      body {
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+        margin: 20px;
+        background: var(--bg);
+        color: #111827;
+        -webkit-font-smoothing:antialiased;
+      }
+
+      .container{max-width:1100px;margin:0 auto;}
+
+      header h1{margin:0 0 18px 0;font-size:20px}
+
+      .columns{display:flex; gap:24px; align-items:flex-start}
+      .column{flex:1; min-width:280px; background:transparent}
+
+      .card{background:var(--card); padding:14px; border-radius:var(--radius); box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+
+      input[type="text"], input[type="number"], input[type="file"]{
+        width:100%; padding:10px 12px; border:1px solid #e6e9ef; border-radius:6px; box-sizing:border-box;
+        margin-top:6px;
+      }
+
+      button{
+        display:inline-block; padding:8px 12px; border-radius:6px; border:0; background:var(--accent); color:var(--accent-contrast); cursor:pointer;
+        font-weight:600; margin-right:8px;
+      }
+      button:active{transform:translateY(1px)}
+
+      .muted{color:var(--muted); font-size:13px}
+
+      pre{background:var(--card); padding:12px; border-radius:6px; overflow:auto; white-space:pre-wrap; word-break:break-word}
+
+      #results .result{padding:10px 12px; border-radius:6px; background:#fff; border:1px solid #eef2ff; margin-bottom:10px}
+      .score{display:inline-block;background:#eef2ff;color:var(--accent);padding:4px 8px;border-radius:999px;font-weight:700;margin-right:8px}
+
+      @media (max-width:800px){
+        .columns{flex-direction:column}
+      }
     </style>
   </head>
   <body>
-    <h1>Release Notes Assistant — Frontend</h1>
+    <div class="container">
+      <header class="card" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div>
+          <h1>Release Notes Assistant</h1>
+          <p class="muted" style="margin:6px 0 0 0">Upload developer artifacts, retrieve relevant chunks, and synthesize concise release notes.</p>
+        </div>
+        <div class="muted" style="font-size:13px">Local demo • no external telemetry</div>
+      </header>
 
-    <div class="column">
-      <h2>Upload Document</h2>
-      <input id="fileInput" type="file" accept=".pdf,.txt,.md" />
-      <br/><br/>
-      <button id="uploadBtn">Upload & Chunk</button>
-      <p id="uploadStatus"></p>
-      <h3>Preview</h3>
-      <pre id="preview">(no preview yet)</pre>
+      <div style="height:18px"></div>
+
+      <div class="columns">
+        <div class="column">
+          <div class="card">
+            <h2 style="margin-top:0">Upload Document</h2>
+            <input id="fileInput" type="file" accept=".pdf,.txt,.md" />
+            <div style="height:12px"></div>
+            <button id="uploadBtn">Upload & Chunk</button>
+            <p id="uploadStatus" class="muted"></p>
+            <h3>Preview</h3>
+            <pre id="preview">(no preview yet)</pre>
+          </div>
+        </div>
+
+        <div class="column">
+          <div class="card">
+            <h2 style="margin-top:0">Query</h2>
+            <input id="queryInput" type="text" placeholder="Enter query..." value="Summarize user-visible changes" />
+            <div style="height:8px"></div>
+            <label class="muted">Top-k:</label>
+            <input id="topk" type="number" value="5" min="1" max="20" style="width:80px;display:inline-block;margin-left:8px;" />
+            <div style="height:12px"></div>
+            <button id="retrieveBtn">Retrieve</button>
+            <button id="generateBtn">Generate Release Notes</button>
+            <h3>Results</h3>
+            <div id="results"></div>
+            <h3>Generated Notes</h3>
+            <pre id="notes">(no notes yet)</pre>
+          </div>
+        </div>
+      </div>
+
+      <footer style="margin-top:18px;padding:10px 8px;text-align:center;color:var(--muted);font-size:13px;">
+        <div>© 2024 — Release Notes Assistant • Keep <code>data/chunks.json</code> as the canonical source of chunks.</div>
+        <div style="margin-top:6px">Run locally: <code>streamlit run backend/app.py</code> or <code>uvicorn backend.api:app --reload</code></div>
+      </footer>
     </div>
 
-    <div class="column">
-      <h2>Query</h2>
-      <input id="queryInput" type="text" style="width:100%" placeholder="Enter query..." value="Summarize user-visible changes" />
-      <br/><br/>
-      Top-k: <input id="topk" type="number" value="5" min="1" max="20" />
-      <br/><br/>
-      <button id="retrieveBtn">Retrieve</button>
-      <button id="generateBtn">Generate Release Notes</button>
-      <h3>Results</h3>
-      <div id="results"></div>
-      <h3>Generated Notes</h3>
-      <pre id="notes">(no notes yet)</pre>
-    </div>
-
-    <script>
-      const apiBase = '/api'; // served by backend
-
-      document.getElementById('uploadBtn').addEventListener('click', async () => {
-        const input = document.getElementById('fileInput');
-        if (!input.files.length) return alert('Select a file first');
-        const file = input.files[0];
-        const form = new FormData();
-        form.append('file', file);
-        document.getElementById('uploadStatus').innerText = 'Uploading...';
-        const resp = await fetch(apiBase + '/chunk', { method: 'POST', body: form });
-        if (!resp.ok) {
-          document.getElementById('uploadStatus').innerText = 'Upload failed: ' + await resp.text();
-          return;
-        }
-        const j = await resp.json();
-        document.getElementById('uploadStatus').innerText = 'Done. Chunks: ' + j.chunks;
-        document.getElementById('preview').innerText = j.preview;
-      });
-
-      document.getElementById('retrieveBtn').addEventListener('click', async () => {
-        const q = document.getElementById('queryInput').value;
-        const topk = parseInt(document.getElementById('topk').value || '5', 10);
-        const resp = await fetch(apiBase + '/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q, top_k: topk }) });
-        if (!resp.ok) {
-          const err = await resp.text();
-          document.getElementById('results').innerText = 'Error: ' + err;
-          return;
-        }
-        const j = await resp.json();
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = '';
-        j.results.forEach(r => {
-          const el = document.createElement('div');
-          el.innerHTML = `<strong>[${r.score.toFixed(4)}] id=${r.id}</strong><div>${r.text.slice(0,400).replace(/\n/g,' ')}</div><hr/>`;
-          resultsDiv.appendChild(el);
-        });
-        document.getElementById('notes').innerText = j.notes || '(no notes)';
-      });
-
-      document.getElementById('generateBtn').addEventListener('click', async () => {
-        // reuse retrieve flow which already populates notes
-        document.getElementById('retrieveBtn').click();
-      });
-    </script>
+    <script src="/app.js"></script>
   </body>
 </html>
 

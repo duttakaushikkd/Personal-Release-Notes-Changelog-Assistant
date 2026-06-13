@@ -13,11 +13,15 @@ langchain-text-splitters>=0.3.3,<1.0.0
 # Optional LangChain internals used by some imports
 langchain-core>=0.2.0
 
-# Vectorstore, embedding client, PDF loader
-# Use a chromadb 0.3.x release that is available on PyPI.
-# 0.3.31 appears to be unavailable/yanked in your environment; 0.3.29 is commonly available.
-chromadb>=0.3.29,<0.4.0
-ollama-client>=0.1.0
+# Vectorstore, embedding client, PDF loader (OPTIONAL - may conflict with langchain/pydantic)
+# Many environments hit dependency conflicts between chromadb (which historically
+# depended on pydantic<2) and recent langchain that requires pydantic>=2. To avoid
+# a resolution error during `pip install -r requirements.txt`, the optional
+# vector/embedding lines are commented out by default. If you need embeddings or
+# Chroma, uncomment and install them into a dedicated environment after
+# confirming compatible versions.
+# chromadb>=0.3.29,<0.4.0
+# ollama-client>=0.1.0
 pypdf>=3.10.0
 
 # Pydantic v2 is required by recent langchain_core/langchain-community releases

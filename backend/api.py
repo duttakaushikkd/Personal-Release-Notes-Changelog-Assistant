@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import List
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.chunking.chunking import start as chunk_start
@@ -50,6 +48,16 @@ async def api_chunk(file: UploadFile = File(...)):
     return JSONResponse({"status": "ok", "chunks": len(chunks), "preview": preview})
 
 
+@app.post("/ingest")
+async def ingest(file: UploadFile = File(...)):
+    """Compatibility ingress endpoint used by the static frontend at /frontend.
+
+    Mirrors `/api/chunk` behavior but uses a simpler path `/ingest` so the
+    frontend can post directly to the same host without a `/api` prefix.
+    """
+    return await api_chunk(file)
+
+
 @app.post("/api/query")
 async def api_query(body: dict):
     """Accept JSON {query: str, top_k: int} and return retrieved chunks + generated notes."""
@@ -75,6 +83,16 @@ async def api_query(body: dict):
     return {"query": query, "top_k": top_k, "results": results, "notes": notes}
 
 
+@app.post("/query")
+async def query(body: dict):
+    """Compatibility endpoint mirroring `/api/query` at `/query`.
+
+    Accepts JSON {query: str, top_k: int} and returns the same shape as
+    `/api/query` for the simpler frontend integration.
+    """
+    return await api_query(body)
+
+
 # Serve the small React-free frontend (static single page) from /frontend
 if Path("frontend/index.html").exists():
     app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
@@ -83,7 +101,22 @@ if Path("frontend/index.html").exists():
 def run():
     import uvicorn
 
-    uvicorn.run("backend.api:app", host="0.0.0.0", port=8000, reload=True)
+    # When running in development with `reload=True`, limit watch directories
+    # to source folders only (avoid watching the virtualenv site-packages
+    # like `.venv/lib/...` which commonly causes infinite reload loops).
+    #
+    # If you still see reload churn, either run without reload or create the
+    # virtualenv outside the project directory.
+    uvicorn.run(
+        "backend.api:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        reload_dirs=["backend", "frontend"],
+        # Exclude common virtualenv and packaging dirs from watch to avoid
+        # endless reload loops when the venv lives inside the project.
+        reload_excludes=[".venv", ".venv/**", "**/site-packages/**", "**/*.dist-info/**", "**/*.egg-info/**"],
+    )
 
 
 if __name__ == "__main__":
