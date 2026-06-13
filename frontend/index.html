@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Release Notes Assistant (Frontend)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin: 20px; }
+      .column { display:inline-block; vertical-align:top; width:48%; margin-right:2%; }
+      pre { background:#f6f8fa; padding:10px; border-radius:6px; overflow:auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Release Notes Assistant — Frontend</h1>
+
+    <div class="column">
+      <h2>Upload Document</h2>
+      <input id="fileInput" type="file" accept=".pdf,.txt,.md" />
+      <br/><br/>
+      <button id="uploadBtn">Upload & Chunk</button>
+      <p id="uploadStatus"></p>
+      <h3>Preview</h3>
+      <pre id="preview">(no preview yet)</pre>
+    </div>
+
+    <div class="column">
+      <h2>Query</h2>
+      <input id="queryInput" type="text" style="width:100%" placeholder="Enter query..." value="Summarize user-visible changes" />
+      <br/><br/>
+      Top-k: <input id="topk" type="number" value="5" min="1" max="20" />
+      <br/><br/>
+      <button id="retrieveBtn">Retrieve</button>
+      <button id="generateBtn">Generate Release Notes</button>
+      <h3>Results</h3>
+      <div id="results"></div>
+      <h3>Generated Notes</h3>
+      <pre id="notes">(no notes yet)</pre>
+    </div>
+
+    <script>
+      const apiBase = '/api'; // served by backend
+
+      document.getElementById('uploadBtn').addEventListener('click', async () => {
+        const input = document.getElementById('fileInput');
+        if (!input.files.length) return alert('Select a file first');
+        const file = input.files[0];
+        const form = new FormData();
+        form.append('file', file);
+        document.getElementById('uploadStatus').innerText = 'Uploading...';
+        const resp = await fetch(apiBase + '/chunk', { method: 'POST', body: form });
+        if (!resp.ok) {
+          document.getElementById('uploadStatus').innerText = 'Upload failed: ' + await resp.text();
+          return;
+        }
+        const j = await resp.json();
+        document.getElementById('uploadStatus').innerText = 'Done. Chunks: ' + j.chunks;
+        document.getElementById('preview').innerText = j.preview;
+      });
+
+      document.getElementById('retrieveBtn').addEventListener('click', async () => {
+        const q = document.getElementById('queryInput').value;
+        const topk = parseInt(document.getElementById('topk').value || '5', 10);
+        const resp = await fetch(apiBase + '/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q, top_k: topk }) });
+        if (!resp.ok) {
+          const err = await resp.text();
+          document.getElementById('results').innerText = 'Error: ' + err;
+          return;
+        }
+        const j = await resp.json();
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '';
+        j.results.forEach(r => {
+          const el = document.createElement('div');
+          el.innerHTML = `<strong>[${r.score.toFixed(4)}] id=${r.id}</strong><div>${r.text.slice(0,400).replace(/\n/g,' ')}</div><hr/>`;
+          resultsDiv.appendChild(el);
+        });
+        document.getElementById('notes').innerText = j.notes || '(no notes)';
+      });
+
+      document.getElementById('generateBtn').addEventListener('click', async () => {
+        // reuse retrieve flow which already populates notes
+        document.getElementById('retrieveBtn').click();
+      });
+    </script>
+  </body>
+</html>
+

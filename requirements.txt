@@ -31,4 +31,9 @@ python-dotenv>=0.19.2
 
 # Utility for generating test PDFs
 reportlab>=4.0
+streamlit>=1.22
+fastapi>=0.95
+uvicorn[standard]>=0.22
+python-multipart>=0.0.6
+aiofiles>=23.1.0
 
