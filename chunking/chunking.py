@@ -44,6 +44,7 @@ def chunking(pdf_path: str = "sample.pdf"):
         class _SimpleDoc:
             def __init__(self, text):
                 self.page_content = text
+                self.metadata = {}
 
         docs = [_SimpleDoc(text)]
     else:
@@ -62,24 +63,58 @@ def chunking(pdf_path: str = "sample.pdf"):
             class _SimpleDoc:
                 def __init__(self, text):
                     self.page_content = text
+                    self.metadata = {}
 
             docs = [_SimpleDoc(text)]
 
     print("Chunking document into smaller pieces...")
     # Split text into manageable sizes with an overlap to maintain context between chunks
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
-    chunks = text_splitter.split_documents(docs)
+    raw_chunks = text_splitter.split_documents(docs)
 
-    print("Initializing embedding model and vector database...")
-    # Local embedding model via Ollama
-    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+    # Convert splitter output (Document objects or strings) into plain dicts
+    chunks = []
+    for i, c in enumerate(raw_chunks):
+        # support langchain Document objects with .page_content or .text
+        text = None
+        if hasattr(c, "page_content"):
+            text = getattr(c, "page_content")
+        elif hasattr(c, "text"):
+            text = getattr(c, "text")
+        elif isinstance(c, str):
+            text = c
+        else:
+            # fallback to str()
+            text = str(c)
+        chunks.append({"id": i, "text": text})
 
-    # Store chunks into an in-memory Chroma vector database
-    vector_store = Chroma.from_documents(documents=chunks, embedding=embeddings)
+    # Ensure data directory exists and write chunks to JSON so downstream steps
+    # can consume them even if embeddings/vectorstore creation fails.
+    os.makedirs("data", exist_ok=True)
+    out_path = os.path.join("data", "chunks.json")
+    try:
+        with open(out_path, "w", encoding="utf-8") as f:
+            import json
 
-    # Return the in-memory vector store so callers can use it for retrieval or
-    # persistence if desired.
-    return vector_store
+            json.dump(chunks, f, ensure_ascii=False, indent=2)
+        print(f"Wrote {len(chunks)} chunks to {out_path}")
+    except Exception as e:
+        print("Failed to write chunks to disk:", e)
+
+    # Try to create embeddings and an in-memory Chroma DB if Ollama/Chroma are
+    # available. Failures here should not prevent chunk file creation above.
+    try:
+        print("Initializing embedding model and vector database...")
+        embeddings = OllamaEmbeddings(model="nomic-embed-text")
+        texts = [c["text"] for c in chunks]
+        vector_store = Chroma.from_documents(documents=texts, embedding=embeddings)
+        print("Created in-memory Chroma vector store")
+    except Exception as e:
+        print("Skipping embedding/vector store creation:", e)
+
+    # Return list of chunk dicts (caller can decide to use persisted JSON or
+    # in-memory vector store if available).
+    return chunks
 
 
 def start(pdf_path: str = "sample.pdf"):
